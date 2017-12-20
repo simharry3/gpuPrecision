@@ -1,0 +1,147 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Stylish Article
+% LaTeX Template
+% Version 2.1 (1/10/15)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Mathias Legrand (legrand.mathias@gmail.com) 
+% With extensive modifications by:
+% Vel (vel@latextemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[fleqn,10pt]{SelfArx} % Document font size and equations flushed left
+
+\usepackage[english]{babel} % Specify a different language here - english by default
+
+\usepackage{lipsum} % Required to insert dummy text. To be removed otherwise
+
+%----------------------------------------------------------------------------------------
+%	COLUMNS
+%----------------------------------------------------------------------------------------
+
+\setlength{\columnsep}{0.55cm} % Distance between the two columns of text
+\setlength{\fboxrule}{0.75pt} % Width of the border around the abstract
+
+%----------------------------------------------------------------------------------------
+%	COLORS
+%----------------------------------------------------------------------------------------
+
+\definecolor{color1}{RGB}{0,0,90} % Color of the article title and sections
+\definecolor{color2}{RGB}{0,20,20} % Color of the boxes behind the abstract and headings
+
+%----------------------------------------------------------------------------------------
+%	HYPERLINKS
+%----------------------------------------------------------------------------------------
+
+\usepackage{hyperref} % Required for hyperlinks
+\hypersetup{hidelinks,colorlinks,breaklinks=true,urlcolor=color2,citecolor=color1,linkcolor=color1,bookmarksopen=false,pdftitle={Title},pdfauthor={Author}}
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE INFORMATION
+%----------------------------------------------------------------------------------------
+
+\JournalInfo{Journal, Vol. XXI, No. 1, 1-5, 2013} % Journal information
+\Archive{Additional note} % Additional notes (e.g. copyright, DOI, review/research article)
+
+\PaperTitle{Pathway Toward MilkyWay@Home GPU Error Mitigation} % Article title
+
+\Authors{Clayton Rayment} % Authors
+% \affiliation{\textsuperscript{1}\textit{Department of Computer Science, Rensselaer Polytechnic Institute}} % Author affiliation
+
+\Keywords{} % Keywords - if you don't want any simply remove all the text between the curly brackets
+\newcommand{\keywordname}{Keywords} % Defines the keywords heading name
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\Abstract{
+    Graphics Processing Units (GPUs) are a fantastic opportunity to accelerate scientific computations. Offering massive parallelization at a consumer-grade price point, GPUs have the potential to greatly increase computation throughput. However, these benefeits are not without their drawbacks. One such drawback, and the topic of this paper, is differing n umeric precision between floating point operations on the GPU and the Central Processing Unit (CPU). This paper focuses specifically on GPU error with the GPU N-Body application of the MilkyWay@Home project.
+}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\flushbottom % Makes all text pages the same height
+
+\maketitle % Print the title and abstract box
+
+\tableofcontents % Print the contents section
+
+\thispagestyle{empty} % Removes page numbering from the first page
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE CONTENTS
+%----------------------------------------------------------------------------------------
+
+\section*{Introduction} % The \section*{} command stops section numbering
+Almost every home computer today has some form of graphics processing available. As of December 20th, 2017 one can purchase an NVIDIA GTX 1080 for \$549.00. Each Streaming Multiprocessor in the NVIDIA Pascal architecture combines 64 single-precision processing cores, and 32 double-precision processing cores. Armed with 2560 CUDA cores, available for use by user-defined applications, this represents immense computing power in an off-the-shelf product.\\~\\
+The inspiration for this paper comes from GPU use on the MilkyWay@Home application. MilkyWay@Home is a large-scale distributed computing project, which relies on volunteer computing time through the BOINC network. To more effectively use our volunteer's computing resources, it becomes more and more important that we push as many calculations as possible onto any available GPUs, which will vastly speed up computation times. \\~\\
+While running some computations, however, it was noticed that even though the algorithms used by the GPU and CPU should be essentially the same, and calculations are, for the most part, independent, the GPU and CPU were returning slightly different results, which causes the current likelihood calculation fail to recognize two simulations as being the same, even though they were started from the same random seed. 
+%------------------------------------------------
+
+\section{OpenCL}
+For MilkyWay@Home we utilize the OpenCL API for accessing graphics cards. Since MilkWay@Home is a heterogeneous system, all dependant on volunteer's hardware, we can not use NVIDIA's CUDA, as this is only supported by NVIDIA devices.
+
+OpenCL offers acces to both AMD and NVIDIA GPUs by compiling GPU kernels "Just In Time" (JIT). JIT compilation allows us to write generic code, which will then be taylored to the specific user's hardware configuration at runtime, allowing us to focus on writing kernels without worrying about hardware support across the MilkyWay@Home universe.
+
+\section{Floating Point Numbers}
+    \subsection{Representation}
+    Floating point numbers are represented by either 32-bits (single precision) or 64-bits (double precision). Half precision (16-bits) are not used by MilkyWay@Home. A floating point number is represented with three components: a sign, exponent, and significand. In both single and double precision floats, the sign takes up one bit. The exponent takes 8 bits of the single-precision float, whereas in the double-precision float it takes 11. The significand takes 23 (plus one implied bit) on a single-precision float, and takes 52 (plus one implied bit) on a double-precision float.
+        \subsubsection{CPU}
+        In certain circumstances, a CPU will actually represent a floating point number with extra bits, and truncate in order to remove floating point error which occurs due to the representation of floats. In the case of double-precision floats, the CPU will represent the 64-bit number using 80 bits, and then truncate the extra bits at the end of the computation.
+        \subsubsection{GPU}
+        For the purposes of this paper, we will be focusing primarily on NVIDIA GPUs. The GPU contains two different types of processing cores in each Streaming Multiprocessor (SM/SMX). The majority of cores are only capable of performing single precision math. In the NVIDIA Pascal architecture, the ratio of cores that can perform single precision operations to the number of cores that can perform double precision operations is roughly 2:1. 
+
+
+\section{Mitigation Techniques}
+    \subsection{Kernel-Side}
+        The initial reaction is to try and mitigate error on the client-side. By doing this, we could use code that already exists to compute the likelihood of the simulations being the same, and not have to worry about fixing that. There are several ways that this was attempted, unfortunately none of them have come to fruition yet.
+
+        \subsubsection{Disable Fast Math}
+            Some optimizations may be made during compilation on both the CPU and GPU. Certain optimizations can be unsafe for floating-point stability. We attempted to turn off fast math to reduce error between GPU and CPU simulations, however we found that this had little to no effect on accuracy, however it had a large detrimental effect on performance.
+        
+        \subsubsection{Fused Multiply Add (FMA)}
+            One advantage the GPU has over the CPU is the Fused Multiply Add operation. In an FMA, a multiply operation and an addition operation are combined into one operation, which preserves floating point safety, and does not contribute to floating point error. In an attempt to get the GPU to match the CPU results, we disabled FMA operations. Unfortunately this made the difference between the GPU and CPU greater.
+
+
+        \subsubsection{Floating Point Truncation}
+            One strategy that was attempted was to truncate all double precision operations on both the GPU and CPU to 10 decimal places of precision. While this did mitigate the problem, it reduced precision to a point that we are unsure if this a valid strategy. Should single-precision operations be an acceptable level, it might be viable to implement prevision clamping on double precision operations in order to match them to the CPU.
+
+        \subsection{Statistical Mitigation}
+            While initially it seems like this is a less desirable solution, by mitigating GPU error through statistics, we avoid potentially slowing down the GPU with overhead to match the CPU simulation. Furthermore, by creating a statistical model which can accept small variences in the simulation input, we make a more stable application, which is less prone to perturbation from things like random seed generation.
+
+\section{Future Work}
+The solution, it seems, is to make updates to the EMD code such that it is more stable. In the Spring 2018 semester I will be working with Siddhartha Shelton to dissect the EMD code in order to make a more numerically stable model.
+
+In addition to changes to the EMD code, we will also be taking a closer look at how the GPU double-precision calculations evaluate on an individual basis as compared to the CPU. Perhaps through this step-by-step analysis we can find some small piece of code that is introducing a small amount of error, and find a way around it.
+
+% ------------------------------------------------
+\phantomsection
+\section*{Acknowledgments} % The \section*{} command stops section numbering
+
+\addcontentsline{toc}{section}{Acknowledgments} % Adds this section to the table of contents
+
+
+%----------------------------------------------------------------------------------------
+%	REFERENCE LIST
+%----------------------------------------------------------------------------------------
+\phantomsection
+\bibliographystyle{unsrt}
+\bibliography{sample}
+
+%----------------------------------------------------------------------------------------
+
+\end{document}
