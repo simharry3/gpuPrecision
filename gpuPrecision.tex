@@ -105,6 +105,8 @@ OpenCL offers acces to both AMD and NVIDIA GPUs by compiling GPU kernels "Just I
         \subsubsection{GPU}
         For the purposes of this paper, we will be focusing primarily on NVIDIA GPUs. The GPU contains two different types of processing cores in each Streaming Multiprocessor (SM/SMX). The majority of cores are only capable of performing single precision math. In the NVIDIA Pascal architecture, the ratio of cores that can perform single precision operations to the number of cores that can perform double precision operations is roughly 2:1. 
 
+\section{Present Error}
+    It was noticed when running GPU and CPU simulations with the same random seed, and plotting next to eachother, that the distributions of particles in a null potential varied slightly from the GPU to the CPU. To further quantify this error, an additional particle variable was added to give each particle a unique ID. Using this ID on both the GPU and CPU particles, a large disparity was noticed between particles in the two different simulations. When comparing histograms, however, the overall distribution remained the same. This means that while both systems propogated differently, they both should have been evaluated as similar by the EMD code, which was not the case. The two simulations are even closer to eachother when the dwarf galaxy is instead placed inside an external potential, and allowed to propogate. While these results are promising, it still shows that there is work to be done in removing the error that is currently in the system. 
 
 \section{Mitigation Techniques}
     \subsection{Kernel-Side}
