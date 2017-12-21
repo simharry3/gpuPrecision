@@ -93,8 +93,7 @@ While running some computations, however, it was noticed that even though the al
 %------------------------------------------------
 
 \section{OpenCL}
-For MilkyWay@Home we utilize the OpenCL API for accessing graphics cards. Since MilkWay@Home is a heterogeneous system, all dependant on volunteer's hardware, we can not use NVIDIA's CUDA, as this is only supported by NVIDIA devices.
-
+For MilkyWay@Home we utilize the OpenCL API for accessing graphics cards. Since MilkWay@Home is a heterogeneous system, all dependant on volunteer's hardware, we can not use NVIDIA's CUDA, as this is only supported by NVIDIA devices.\\~\\
 OpenCL offers acces to both AMD and NVIDIA GPUs by compiling GPU kernels "Just In Time" (JIT). JIT compilation allows us to write generic code, which will then be taylored to the specific user's hardware configuration at runtime, allowing us to focus on writing kernels without worrying about hardware support across the MilkyWay@Home universe.
 
 \section{Floating Point Numbers}
@@ -123,16 +122,17 @@ OpenCL offers acces to both AMD and NVIDIA GPUs by compiling GPU kernels "Just I
             One strategy that was attempted was to truncate all double precision operations on both the GPU and CPU to 10 decimal places of precision. While this did mitigate the problem, it reduced precision to a point that we are unsure if this a valid strategy. Should single-precision operations be an acceptable level, it might be viable to implement prevision clamping on double precision operations in order to match them to the CPU.
 
         \subsection{Statistical Mitigation}
-            While initially it seems like this is a less desirable solution, by mitigating GPU error through statistics, we avoid potentially slowing down the GPU with overhead to match the CPU simulation. Furthermore, by creating a statistical model which can accept small variences in the simulation input, we make a more stable application, which is less prone to perturbation from things like random seed generation.
+            While initially it seems like this is a less desirable solution, by mitigating GPU error through statistics, we avoid potentially slowing down the GPU with overhead to match the CPU simulation. Furthermore, by creating a statistical model which can accept small variences in the simulation input, we make a more stable application, which is less prone to perturbation from things like random seed generation.\\~\\
+            Currently, EMD is very sensitive to small changes in simulation input which is unrelated to the parameters. This is unfortunate, as different random seeds will in some cases cause greater error than the difference between a GPU and CPU run.\\~\\
+            This was partially fixed by implementing a "Best Likelihood" feature, where a simulation is run until 98\% completion, after which point, the likelihood is calculated each timestep, and the simulation is stopped after the likelihood is maximized. This is an option which could be implemented on the GPU by using GPU acceleration for 98\% of the simulation, and then running the remaining 2\% on the CPU using the "Best Likelihood" algorithm.\\~\\
 
 \section{Future Work}
-The solution, it seems, is to make updates to the EMD code such that it is more stable. In the Spring 2018 semester I will be working with Siddhartha Shelton to dissect the EMD code in order to make a more numerically stable model.
-
-In addition to changes to the EMD code, we will also be taking a closer look at how the GPU double-precision calculations evaluate on an individual basis as compared to the CPU. Perhaps through this step-by-step analysis we can find some small piece of code that is introducing a small amount of error, and find a way around it.
+The solution, it seems, is to make updates to the EMD code such that it is more stable, and additions to the GPU code such that it runs the "Best Likelihood" algorithm. In the Spring 2018 semester I will be working with Siddhartha Shelton to dissect the EMD code in order to make a more numerically stable model. In addition to this, I will also be implementing the "Best Likelihood" code on the host machine GPU code.\\~\\
+In addition to possible changes to the EMD code, we will also be taking a closer look at how the GPU double-precision calculations evaluate on an individual basis as compared to the CPU. Perhaps through this step-by-step analysis we can find some small piece of code that is introducing a small amount of error, and find a way around it.
 
 % ------------------------------------------------
 \phantomsection
-\section*{Acknowledgments} % The \section*{} command stops section numbering
+% \section*{Acknowledgments} % The \section*{} command stops section numbering
 
 \addcontentsline{toc}{section}{Acknowledgments} % Adds this section to the table of contents
 
